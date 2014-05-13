@@ -1,65 +1,71 @@
 <?php
+
 class ApiApprove extends ApiBase {
 
     public function execute() {
         global $wgScript, $wgUser;
+
 	$approvedNS = 'User_talk';
+
         $pageName = $this->getMain()->getVal('title');
 	$pageName = str_replace( ' ', '_', $pageName );
 
-	if (!in_array('bureaucrat', $wgUser->getGroups()) || !in_array('sysop', $wgUser->getGroups())) {
+	if (!$wgUser->isAllowed('approve-power')) {
     	   header("Location: " . $wgScript . '/' . $pageName );
     	   die();
 	}
 
-	$parts = explode( ':', $pageName );
-	$newPageName = count($parts) == 2 ? $approvedNS . ':' . $parts[1] : $approvedNS . ':' . $parts[0];
+	$mailHeaders = "From: $sdhofSenderEmailAddress";
 
-	$oldTitle = Title::newFromText($pageName);
-	$newTitle = Title::newFromText($newPageName);
+        $approve_action = $this->getMain()->getVal('approveaction');
 
-	$error = $oldTitle->moveTo($newTitle, false, 'Approved', true);
+	if ($approve_action == 'approve') {
+	   $parts = explode( ':', $pageName );
+	   $newPageName = count($parts) == 2 ? $approvedNS . ':' . $parts[1] : $approvedNS . ':' . $parts[0];
 
-	if ($error !== true)
-	{
-	  var_dump($error);
-	  die();
+	   $oldTitle = Title::newFromText($pageName);
+	   $newTitle = Title::newFromText($newPageName);
+
+	   $error = $oldTitle->moveTo($newTitle, false, 'Approved', true);
+
+	   if ($error !== true) {
+	      var_dump($error);
+	      die();
+	   }
+
+	   // Send all the necessary mails
+
+	   mail(
+	      $this->getMain()->getVal('email'),
+	      wfMessage('approve-mail-subject-submitter', $pageName) ,
+	      wfMessage('approve-mail-message-submitter', $pageName, $newTitle->getFullURL()),
+	      $mailHeaders
+	   );
+
+	   mail(
+	      $sdhofPressReleaseEmailAddress,
+	      wfMessage('approve-mail-subject-press', $pageName) ,
+	      wfMessage('approve-mail-message-press', $pageName, $newTitle->getFullURL()),
+	      $mailHeaders
+	   );
+
+	   header("Location: " . $wgScript . '/' . $newPageName );
+    	   die();
+	} else {
+
+	   mail(
+	      $this->getMain()->getVal('email'),
+	      wfMessage('reject-mail-subject-submitter', $pageName) ,
+	      wfMessage('reject-mail-message-submitter', $pageName),
+	      $mailHeaders
+	   );
+
+	   header("Location: " . $wgScript . '/' . $pageName );
+    	   die();
 	}
-
-	// Send all the necessary mails
-	
-	// The message
-	$message = "Hi, \r\n
-Your project $pageName got approved.
-You can see the page at " . $approvedNS . ":" . $parts[1] . "\r\n
-\r\n
-Regards,\r\n
-sender";
-
-	// Send
-	mail('projectowner@example.com', 'Your project ' . $pageName . ' got approved', $message);
-
-
-
-
-	// The second email
-	$message = "Hi, \r\n
-The project $pageName got approved.
-You can see the page at " . $approvedNS . ":" . $parts[1] . "\r\n
-\r\n
-Regards,\r\n
-sender";
-
-	// Send
-	mail('media@example.com', 'The project ' . $pageName . ' got approved', $message);
-
-
-    	header("Location: " . $wgScript . '/' . $newPageName );
-    	die();
     }
 
 
-    // Description
     public function getDescription() {
          return 'Api to approve or reject a proposal.';
      }
@@ -70,21 +76,27 @@ sender";
                 ApiBase::PARAM_TYPE => 'string',
                 ApiBase::PARAM_REQUIRED => true
             ),
+            'email' => array (
+                ApiBase::PARAM_TYPE => 'string',
+                ApiBase::PARAM_REQUIRED => true
+            ),
+            'approveaction' => array (
+                ApiBase::PARAM_TYPE => 'string',
+                ApiBase::PARAM_REQUIRED => true
+            ),
         ));
     }
  
-     // Describe the parameter
     public function getParamDescription() {
         return array_merge( parent::getParamDescription(), array(
-            'title' => 'The title of the proposal page'
+            'title' => 'The title of the proposal page',
+            'email' => 'The email address of the proposal creator',
+	    'approveaction' => 'The desired action',
         ) );
     }
  
-     // Get examples
      public function getExamples() {
          return array(
-             'api.php?action=apisampleoutput&face=O_o&format=xml'
-             => 'Get a sideways look (and the usual predictions)'
          );
     }
 }

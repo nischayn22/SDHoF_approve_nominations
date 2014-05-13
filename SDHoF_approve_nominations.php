@@ -27,33 +27,31 @@ $wgExtensionCredits['parser extensions'][] = array(
 );
 
 $wgExtensionMessagesFiles['SDHoF_approve_nominations'] = __DIR__ . '/SDHoF_approve_nominations.i18n.php';
-// Map class name to filename for autoloading
 $wgAutoloadClasses['ApiApprove'] = __DIR__ . '/SDHoF_approve_nominations_Api_Approve.php';
- 
-// Map module name to class name
 $wgAPIModules['apiapprove'] = 'ApiApprove';
 
-function NominateAndNotify($parser, $action) {
-    global $wgTitle, $wgScriptPath;
+function NominateAndNotify($parser, $action, $emailAddress) {
+    global $wgTitle, $wgScriptPath, $wgUser;
 
-    if ($wgTitle->getNamespace() !== NS_USER)
-    {
-      return '';
+    if ($wgTitle->getNamespace() !== NS_USER) {
+       return '';
     }
-    
 
-    if ($action != 'approve' && $action != 'reject')
-    {
-	return 'The first parameter of #NominateAndNotify can only be approve or reject, you gave ' . $action;
+    if (!in_array('bureaucrat', $wgUser->getGroups()) || !in_array('sysop', $wgUser->getGroups())) {
+       return '';
+    }
+
+    if ($action != 'approve' && $action != 'reject') {
+       return 'The first parameter of #NominateAndNotify can only be approve or reject, you gave ' . $action;
     }
 
     $htmlOut = Xml::openElement( 'form', array(
-				      'name' => 'nominateAndNotify',
-				      'class' => '',
-				      'action' => "{$wgScriptPath}/api.php",
-				      'method' => 'get'
-				  )
-	);
+    	     'name' => 'nominateAndNotify',
+	     'class' => '',
+	     'action' => "{$wgScriptPath}/api.php",
+	     'method' => 'get'
+	     )
+    );
 
     $htmlOut .= Xml::openElement( 'input',
            array(
@@ -61,7 +59,23 @@ function NominateAndNotify($parser, $action) {
                'name' => 'action',
                'value' => 'apiapprove',
            )
-	);
+    );
+
+    $htmlOut .= Xml::openElement( 'input',
+           array(
+               'type' => 'hidden',
+               'name' => 'email',
+               'value' => $emailAddress,
+           )
+    );
+
+    $htmlOut .= Xml::openElement( 'input',
+           array(
+               'type' => 'hidden',
+               'name' => 'approveaction',
+               'value' => $action == 'approve' ? 'approve' : 'reject',
+           )
+    );
 
     $htmlOut .= Xml::openElement( 'input',
            array(
@@ -69,18 +83,17 @@ function NominateAndNotify($parser, $action) {
                'name' => 'title',
                'value' => $wgTitle->getFullText(),
            )
-	);
+    );
 
     $htmlOut .= Xml::openElement( 'input',
            array(
                'type' => 'submit',
                'value' => $action == 'approve' ? 'Approve and Notify' : 'Reject and Notify',
            )
-	);
+    );
 
     $htmlOut .= Xml::closeElement( 'form' );
 
-    // Return HTML
     return array( $htmlOut, 'noparse' => true, 'isHTML' => true );
 }
 
@@ -93,3 +106,8 @@ function NominateAndNotifyInit( Parser &$parser ) {
 
 $wgHooks['ParserFirstCallInit'][] = 'NominateAndNotifyInit';
 
+$sdhofPressReleaseEmailAddress = 'press@example.com';
+$sdhofSenderEmailAddress = 'sender@example.com';
+
+$wgAvailableRights[] = 'approve-power';
+$wgGroupPermissions['sysop']['approve-power'] = true;
