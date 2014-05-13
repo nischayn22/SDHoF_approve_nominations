@@ -3,9 +3,9 @@
 class ApiApprove extends ApiBase {
 
     public function execute() {
-        global $wgScript, $wgUser;
+        global $wgScript, $wgUser, $sdhofSenderEmailAddress, $sdhofPressReleaseEmailAddress, $sdhofAcceptedNS;
 
-	$approvedNS = 'User_talk';
+	$approvedNS = MWNamespace::getCanonicalName($sdhofAcceptedNS);
 
         $pageName = $this->getMain()->getVal('title');
 	$pageName = str_replace( ' ', '_', $pageName );

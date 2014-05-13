@@ -31,9 +31,9 @@ $wgAutoloadClasses['ApiApprove'] = __DIR__ . '/SDHoF_approve_nominations_Api_App
 $wgAPIModules['apiapprove'] = 'ApiApprove';
 
 function NominateAndNotify($parser, $action, $emailAddress) {
-    global $wgTitle, $wgScriptPath, $wgUser;
+    global $wgTitle, $wgScriptPath, $wgUser, $sdhofNominationNS;
 
-    if ($wgTitle->getNamespace() !== NS_USER) {
+    if ($wgTitle->getNamespace() !== $sdhofNominationNS) {
        return '';
     }
 
@@ -108,6 +108,8 @@ $wgHooks['ParserFirstCallInit'][] = 'NominateAndNotifyInit';
 
 $sdhofPressReleaseEmailAddress = 'press@example.com';
 $sdhofSenderEmailAddress = 'sender@example.com';
+$sdhofNominationNS = NS_USER;
+$sdhofAcceptedNS = NS_USER_TALK;
 
 $wgAvailableRights[] = 'approve-power';
 $wgGroupPermissions['sysop']['approve-power'] = true;
