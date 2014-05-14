@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SDHoF approve nominations
  *
@@ -42,14 +43,19 @@ function NominateAndNotify($parser, $action, $emailAddress) {
     }
 
     if ($action != 'approve' && $action != 'reject') {
-       return 'The first parameter of #NominateAndNotify can only be approve or reject, you gave ' . $action;
+       return 'The first parameter of #NominateAndNotify can only be approve or reject, you gave ' . $action . '\n';
     }
 
-    $htmlOut = Xml::openElement( 'form', array(
-    	     'name' => 'nominateAndNotify',
-	     'class' => '',
-	     'action' => "{$wgScriptPath}/api.php",
-	     'method' => 'get'
+    if (!isset($emailAddress)) {
+       return 'The second parameter of #NominateAndNotify must be set to the email of the nominator\n';
+    }
+
+    $htmlOut = Xml::openElement( 'form', 
+    	     array(
+		'name' => 'nominateAndNotify',
+	     	'class' => '',
+	     	'action' => "{$wgScriptPath}/api.php",
+	     	'method' => 'get'
 	     )
     );
 
@@ -109,7 +115,8 @@ $wgHooks['ParserFirstCallInit'][] = 'NominateAndNotifyInit';
 $sdhofPressReleaseEmailAddress = 'press@example.com';
 $sdhofSenderEmailAddress = 'sender@example.com';
 $sdhofNominationNS = NS_USER;
-$sdhofAcceptedNS = NS_USER_TALK;
+$sdhofApprovedNS = NS_USER_TALK;
+$sdhofRejectedNS = NS_USER_TALK;
 
 $wgAvailableRights[] = 'approve-power';
 $wgGroupPermissions['sysop']['approve-power'] = true;

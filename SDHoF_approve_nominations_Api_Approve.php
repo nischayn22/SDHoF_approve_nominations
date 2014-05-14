@@ -3,9 +3,7 @@
 class ApiApprove extends ApiBase {
 
     public function execute() {
-        global $wgScript, $wgUser, $sdhofSenderEmailAddress, $sdhofPressReleaseEmailAddress, $sdhofAcceptedNS;
-
-	$approvedNS = MWNamespace::getCanonicalName($sdhofAcceptedNS);
+        global $wgScript, $wgUser, $sdhofSenderEmailAddress, $sdhofPressReleaseEmailAddress, $sdhofApprovedNS, $sdhofRejectedNS;
 
         $pageName = $this->getMain()->getVal('title');
 	$pageName = str_replace( ' ', '_', $pageName );
@@ -20,6 +18,9 @@ class ApiApprove extends ApiBase {
         $approve_action = $this->getMain()->getVal('approveaction');
 
 	if ($approve_action == 'approve') {
+
+	   $approvedNS = MWNamespace::getCanonicalName($sdhofApprovedNS);
+
 	   $parts = explode( ':', $pageName );
 	   $newPageName = count($parts) == 2 ? $approvedNS . ':' . $parts[1] : $approvedNS . ':' . $parts[0];
 
@@ -53,14 +54,29 @@ class ApiApprove extends ApiBase {
     	   die();
 	} else {
 
+	   $rejectedNS = MWNamespace::getCanonicalName($sdhofRejectedNS);
+
+	   $parts = explode( ':', $pageName );
+	   $newPageName = count($parts) == 2 ? $rejectedNS . ':' . $parts[1] : $rejectedNS . ':' . $parts[0];
+
+	   $oldTitle = Title::newFromText($pageName);
+	   $newTitle = Title::newFromText($newPageName);
+
+	   $error = $oldTitle->moveTo($newTitle, false, 'Rejected', true);
+
+	   if ($error !== true) {
+	      var_dump($error);
+	      die();
+	   }
+
 	   mail(
 	      $this->getMain()->getVal('email'),
 	      wfMessage('reject-mail-subject-submitter', $pageName) ,
-	      wfMessage('reject-mail-message-submitter', $pageName),
+	      wfMessage('reject-mail-message-submitter', $pageName, $newTitle->getFullURL()),
 	      $mailHeaders
 	   );
 
-	   header("Location: " . $wgScript . '/' . $pageName );
+	   header("Location: " . $wgScript . '/' . $newPageName );
     	   die();
 	}
     }
@@ -91,7 +107,7 @@ class ApiApprove extends ApiBase {
         return array_merge( parent::getParamDescription(), array(
             'title' => 'The title of the proposal page',
             'email' => 'The email address of the proposal creator',
-	    'approveaction' => 'The desired action',
+	    'approveaction' => 'The desired action - approve or reject',
         ) );
     }
  
