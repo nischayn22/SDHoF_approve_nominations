@@ -42,15 +42,31 @@ function NominateAndNotify($parser, $action, $emailAddress) {
        return '';
     }
 
-    if ($action != 'approve' && $action != 'reject') {
-       return 'The first parameter of #NominateAndNotify can only be approve or reject, you gave ' . $action . '\n';
+    $opts = array();
+
+    for ( $i = 1; $i < func_num_args(); $i++ ) {
+    	$opts[] = func_get_arg( $i );
     }
 
-    if (!isset($emailAddress)) {
-       return 'The second parameter of #NominateAndNotify must be set to the email of the nominator\n';
+    $options = array();
+
+    foreach ( $opts as $opt ) {
+      $pair = explode( '=', $opt, 2 );
+      if ( count( $pair ) == 2 ) {
+        $name = trim( $pair[0] );
+        $value = trim( $pair[1] );
+        $options[$name] = $value;
+      }
     }
 
-    $htmlOut = Xml::openElement( 'form', 
+    if ($options['action'] != 'approve' && $options['action'] != 'reject') {
+       return 'The first parameter of #NominateAndNotify can only be approve or reject, you gave ' . $options['action'] . '\n';
+    }
+
+    $action = $options['action'];
+    unset($options['action']);
+
+    $htmlOut = Xml::openElement( 'form',
     	     array(
 		'name' => 'nominateAndNotify',
 	     	'class' => '',
@@ -70,18 +86,21 @@ function NominateAndNotify($parser, $action, $emailAddress) {
     $htmlOut .= Xml::openElement( 'input',
            array(
                'type' => 'hidden',
-               'name' => 'email',
-               'value' => $emailAddress,
-           )
-    );
-
-    $htmlOut .= Xml::openElement( 'input',
-           array(
-               'type' => 'hidden',
                'name' => 'approveaction',
                'value' => $action == 'approve' ? 'approve' : 'reject',
            )
     );
+
+    foreach( $options as $key => $value)
+    {
+      $htmlOut .= Xml::openElement( 'input',
+             array(
+               'type' => 'hidden',
+               'name' => $key,
+               'value' => $value,
+           )
+      );
+    }
 
     $htmlOut .= Xml::openElement( 'input',
            array(
